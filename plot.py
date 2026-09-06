@@ -2,117 +2,66 @@ import dill as pkl
 import numpy as np
 import matplotlib.pyplot as plt
 
-from functions import s2y
 
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 # Load thermal evolution
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 
 with open("Demo/thermal.pkl", "rb") as f:
     Q = pkl.load(f)
 
-# ---------------------------------------------------------
-# Times we want
-# ---------------------------------------------------------
+seconds_per_year = 365.25 * 24.0 * 3600.0
+t_Gyr = np.asarray(Q.t) / seconds_per_year / 1.0e9
 
-times_yr = [0.0, 5e8, 1.5e9, 5e9]
-colors = ["purple", "blue", "green", "orange"]
 
-t_yr = s2y(Q.t)
+# ------------------------------------------------------------
+# Load magnetic evolution
+# ------------------------------------------------------------
 
-indices = [
-    np.argmin(np.abs(t_yr - tt))
-    for tt in times_yr
-]
+with open("Demo/magnetic_nominal.pkl", "rb") as f:
+    M = pkl.load(f)
 
-# ---------------------------------------------------------
+
+# ------------------------------------------------------------
+# Print ranges
+# ------------------------------------------------------------
+
+print("BMO surface field [uT]:",
+      np.nanmin(M.BS_S_BMO_cst * 1e6),
+      np.nanmax(M.BS_S_BMO_cst * 1e6))
+
+print("Core surface field [uT]:",
+      np.nanmin(M.BS_S_core_cst * 1e6),
+      np.nanmax(M.BS_S_core_cst * 1e6))
+
+
+# ------------------------------------------------------------
 # Plot
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 
 fig, ax = plt.subplots(figsize=(8, 6))
 
-for idx, color, target_time in zip(indices, colors, times_yr):
-
-    S = Q.S[idx]
-
-    # Core
-    ax.plot(
-        S.radius_core / 1e3,
-        S.T_core,
-        color=color,
-        lw=1.8,
-    )
-
-    # BMO
-    ax.plot(
-        S.radius_BMO_r_0 / 1e3,
-        S.Ta_BMO_r_0,
-        color=color,
-        lw=1.8,
-    )
-
-    # Mantle
-    ax.plot(
-        S.radius_mantle / 1e3,
-        Q.T_mantle[idx],
-        color=color,
-        lw=1.8,
-    )
-
-
-# ---------------------------------------------------------
-# Melting curves
-# Use initial structure because these are basically
-# pressure-dependent reference curves
-# ---------------------------------------------------------
-
-S0 = Q.S[0]
-
 ax.plot(
-    S0.radius_silicate / 1e3,
-    S0.Tm_mantle,
-    "--",
-    color="purple",
-    lw=1.5,
-    label="Mantle liquidus",
+    t_Gyr,
+    M.BS_S_BMO_cst * 1e6,
+    linewidth=2,
+    label="BMO",
 )
 
 ax.plot(
-    S0.radius_core / 1e3,
-    S0.Tm_core,
-    "-.",
-    color="purple",
-    lw=1.5,
-    label="Core liquidus",
+    t_Gyr,
+    M.BS_S_core_cst * 1e6,
+    linewidth=2,
+    label="Core",
 )
 
-# ---------------------------------------------------------
-# Formatting
-# ---------------------------------------------------------
+ax.set_xlabel("Time (Gyr)", fontsize=14)
+ax.set_ylabel("Surface magnetic field ($\\mu$T)", fontsize=14)
 
-ax.set_xlabel(r"$r$ (km)")
-ax.set_ylabel(r"$T$ (K)")
+ax.set_xlim(0, 10)
 
-ax.grid(alpha=0.25)
-
-# Legend for times
-time_handles = []
-
-for c, tt in zip(colors, times_yr):
-    time_handles.append(
-        plt.Line2D(
-            [0], [0],
-            color=c,
-            lw=2,
-            label=f"t = {tt:.2e} yr"
-        )
-    )
-
-ax.legend(
-    handles=time_handles,
-    loc="lower left",
-)
+ax.legend(fontsize=11)
+ax.grid(alpha=0.2)
 
 plt.tight_layout()
-plt.savefig("temperature_profiles.png", dpi=300)
 plt.show()
